@@ -1,0 +1,31 @@
+# Wavoria instrument design language
+
+## Family resemblance
+
+Wavoria is Veloria’s sister instrument. Both use Latham Audio’s dark glass and machined-metal construction, dense central engine visualization, compact uppercase technical labels, neutral ivory type, and restrained luminous energy. Layout and material establish the family; color and engine behavior establish the individual instrument.
+
+## Wavoria color
+
+| Role | Name | RGB | Use |
+|---|---|---:|---|
+| Primary | Electric jade | `57, 230, 174` | brand mark, parameter arcs, active terrain |
+| Secondary | Deep lagoon | `34, 171, 159` | terrain depth and quiet field motion |
+| Energy | Molten coral | `255, 121, 95` | reader heads, field energy, active status |
+| Highlight | Mineral ice | `151, 230, 216` | particles and voice differentiation |
+| Type | Warm ivory | `229, 225, 216` | titles and primary labels |
+
+Veloria’s violet/magenta/gold palette should not be reused as Wavoria’s identity. Wavoria’s globe should feel like a luminous mineral world: geological, fluid, and electrically alive.
+
+## The globe
+
+The central globe is a direct instrument view:
+
+- terrain ribbons represent the current analytic surface
+- particle density and glow respond to shared field energy
+- reader heads are the active voice positions
+- fading filaments are recent trajectories
+- deformation and memory alter the world used by the audio engine
+- the idle state remains dimensional and legible, never a blank analyzer
+
+Avoid concentric radar circles, generic spectrum bars, decorative waveforms, and unrelated space imagery. The object is a navigable mathematical world, not a sci-fi screen treatment.
+
