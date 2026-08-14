@@ -37,6 +37,16 @@ constexpr float tau = pi * 2.0f;
     value *= 0x846ca68bu;
     return value ^ (value >> 16u);
 }
+
+[[nodiscard]] inline std::array<float, 2> stereoGains(float pan, float width) noexcept
+{
+    // Keep a centre anchor even at maximum width. Wavoria's mono readers create
+    // stereo as an ensemble; one note should never disappear from either channel.
+    constexpr float maximumSpread = 0.55f;
+    const auto spread = clamp(pan, -1.0f, 1.0f) * clamp(width, 0.0f, 1.0f) * maximumSpread;
+    const auto angle = (spread + 1.0f) * pi * 0.25f;
+    return { std::cos(angle), std::sin(angle) };
+}
 } // namespace detail
 
 struct TerrainParameters

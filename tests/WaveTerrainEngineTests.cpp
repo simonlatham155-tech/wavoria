@@ -120,6 +120,23 @@ void releaseEventuallyFinishes()
         static_cast<void>(reader.processSample(field));
     require(!reader.isActive(), "a released reader must become available for reuse");
 }
+
+void stereoFieldKeepsBothChannelsAlive()
+{
+    const auto centre = wavoria::dsp::detail::stereoGains(1.0f, 0.0f);
+    require(std::abs(centre[0] - centre[1]) < 0.00001f,
+            "zero width must produce a centred mono image");
+
+    for (int step = 0; step <= 40; ++step)
+    {
+        const auto pan = -1.0f + static_cast<float>(step) * 0.05f;
+        const auto gains = wavoria::dsp::detail::stereoGains(pan, 1.0f);
+        require(gains[0] > 0.3f && gains[1] > 0.3f,
+                "maximum width must retain every voice in both channels");
+        require(std::abs(gains[0] * gains[0] + gains[1] * gains[1] - 1.0f) < 0.00001f,
+                "stereo panning must preserve constant power");
+    }
+}
 } // namespace
 
 int main()
@@ -129,6 +146,7 @@ int main()
     readersAreDeterministic();
     chordsReshapeTheField();
     releaseEventuallyFinishes();
+    stereoFieldKeepsBothChannelsAlive();
     std::cout << "Wavoria DSP tests passed\n";
     return 0;
 }

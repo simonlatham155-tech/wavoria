@@ -183,10 +183,9 @@ void WavoriaAudioProcessor::renderRange(juce::AudioBuffer<float>& buffer, int st
             if (!frames[index].active)
                 continue;
 
-            const auto pan = juce::jlimit(-1.0f, 1.0f, voice.pan * snapshot.width);
-            const auto angle = (pan + 1.0f) * juce::MathConstants<float>::pi * 0.25f;
-            left += frames[index].sample * std::cos(angle);
-            right += frames[index].sample * std::sin(angle);
+            const auto gains = wavoria::dsp::detail::stereoGains(voice.pan, snapshot.width);
+            left += frames[index].sample * gains[0];
+            right += frames[index].sample * gains[1];
             ++sounding;
         }
 

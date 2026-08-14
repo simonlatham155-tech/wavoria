@@ -63,6 +63,7 @@ The fundamental path phase remains locked to note frequency. Slow drift and fiel
 - Mod wheel supplies a global expression source when pressure is unavailable.
 - Pitch bend is ±2 semitones.
 - Sustain retains readers while released keys continue to write the shared field.
+- Stereo width distributes the reader ensemble around an anchored constant-power field; a single reader always remains audible in both channels.
 
 ## Real-time constraints
 
@@ -70,4 +71,3 @@ The fundamental path phase remains locked to note frequency. Slow drift and fiel
 - UI state crosses the audio/UI boundary through relaxed atomics.
 - Reader imprints are applied after all voices are sampled for a frame, avoiding voice-order feedback within that sample.
 - The field is transient performance state; preset/state recall stores parameters and seed, not a frozen audio-history grid.
-
