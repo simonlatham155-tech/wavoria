@@ -32,6 +32,7 @@ if(WAVORIA_BUILD_PLUGIN)
         EDITOR_WANTS_KEYBOARD_FOCUS FALSE
         COPY_PLUGIN_AFTER_BUILD FALSE
     )
+    juce_generate_juce_header(Wavoria)
 
     target_sources(Wavoria
         PRIVATE
@@ -71,4 +72,3 @@ if(WAVORIA_BUILD_TESTS)
     endif()
     add_test(NAME WavoriaDSPTests COMMAND WavoriaDSPTests)
 endif()
-
