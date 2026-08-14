@@ -51,6 +51,7 @@ public:
     [[nodiscard]] float getVisualFieldHeight(float x, float y) const noexcept;
     [[nodiscard]] float getFieldEnergy() const noexcept { return fieldEnergy.load(std::memory_order_relaxed); }
     [[nodiscard]] int getActiveVoiceCount() const noexcept { return activeVoiceCount.load(std::memory_order_relaxed); }
+    void requestNewField() noexcept { clearFieldRequested.store(true, std::memory_order_release); }
 
     juce::AudioProcessorValueTreeState parameters;
 
@@ -107,6 +108,7 @@ private:
     juce::dsp::Gain<float> outputGain;
     std::atomic<float> fieldEnergy { 0.0f };
     std::atomic<int> activeVoiceCount { 0 };
+    std::atomic<bool> clearFieldRequested { false };
     std::uint64_t voiceAge { 0 };
     int visualUpdateCountdown { 0 };
 

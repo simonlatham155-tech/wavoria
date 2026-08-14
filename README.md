@@ -28,6 +28,8 @@ The first playable architecture includes:
 - circular-to-Lissajous trajectory morphing, radius, rotation, drift, and reader interaction
 - shared note imprints, memory decay, and gradient gravity
 - ADSR, tone control, nonlinear drive, stereo voice field, and output level
+- eight factory sounds plus editable user presets stored in Wavoria's own preset format
+- Veloria-family Discover, New Field, Save, Save As, Rename, Delete, and previous/next workflow
 - VST3, Audio Unit, and standalone targets through JUCE
 - dependency-free DSP tests for bounds, determinism, field memory, chord deformation, and release behavior
 
@@ -62,5 +64,4 @@ ctest --test-dir build-tests --output-on-failure
 
 ## Status
 
-The shared-field engine, polyphonic MIDI layer, state handling, and first complete instrument interface are implemented. The next milestone is sound design, alias-control profiling, preset architecture, and host validation across the three target formats.
-
+The shared-field engine, polyphonic MIDI layer, factory/user preset workflow, state handling, and first complete instrument interface are implemented. The next milestone is deeper sound design, alias-control profiling, preset search/favourites, and host validation across the three target formats.

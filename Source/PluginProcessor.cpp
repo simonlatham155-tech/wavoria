@@ -122,6 +122,8 @@ void WavoriaAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce:
 {
     juce::ScopedNoDenormals noDenormals;
     buffer.clear();
+    if (clearFieldRequested.exchange(false, std::memory_order_acq_rel))
+        sharedField.clear();
     const auto snapshot = readParameters();
     int renderedUntil = 0;
 
@@ -395,7 +397,10 @@ void WavoriaAudioProcessor::getStateInformation(juce::MemoryBlock& destination)
 void WavoriaAudioProcessor::setStateInformation(const void* data, int size)
 {
     if (auto xml = getXmlFromBinary(data, size))
+    {
         parameters.replaceState(juce::ValueTree::fromXml(*xml));
+        requestNewField();
+    }
 }
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()

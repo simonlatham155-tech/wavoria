@@ -12,6 +12,8 @@ Implemented:
 - expressive MIDI input
 - state recall and seeded behavior
 - Latham Audio interface with a live terrain globe
+- eight factory presets and an editable user-preset library
+- Discover and New Field sound-design actions
 - dependency-free DSP regression tests
 
 Exit work:
@@ -35,7 +37,7 @@ Create ten patches that prove the engine has breadth without leaning on a conven
 - vocal/formant-like terrain
 - evolving cinematic field
 
-Add a versioned preset format, patch browser, init patch, and A/B-safe deterministic recall.
+Expand the preset library with search, favourites, categories, format versioning, and A/B-safe deterministic recall.
 
 ## Milestone 3 — Performance geometry
 
@@ -64,4 +66,3 @@ Every new feature must answer at least one of these questions:
 - Does it reveal a sound that a conventional oscillator/filter/mod-matrix design would not naturally produce?
 
 If not, it does not belong in Wavoria merely because another synthesizer has it.
-

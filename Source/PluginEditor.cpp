@@ -23,6 +23,14 @@ WavoriaLookAndFeel::WavoriaLookAndFeel()
     setColour(juce::Slider::textBoxOutlineColourId, juce::Colours::transparentBlack);
     setColour(juce::Slider::rotarySliderFillColourId, palette::jade);
     setColour(juce::Label::textColourId, palette::ivory);
+    setColour(juce::ComboBox::textColourId, palette::ivory);
+    setColour(juce::ComboBox::backgroundColourId, palette::panel);
+    setColour(juce::ComboBox::outlineColourId, palette::panelEdge);
+    setColour(juce::ComboBox::arrowColourId, palette::jade);
+    setColour(juce::PopupMenu::backgroundColourId, palette::panel);
+    setColour(juce::PopupMenu::textColourId, palette::ivory);
+    setColour(juce::PopupMenu::highlightedBackgroundColourId, palette::lagoon.withAlpha(0.48f));
+    setColour(juce::PopupMenu::highlightedTextColourId, palette::ivory);
 }
 
 void WavoriaLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int width, int height,
@@ -72,6 +80,58 @@ void WavoriaLookAndFeel::drawLabel(juce::Graphics& g, juce::Label& label)
     g.setColour(label.findColour(juce::Label::textColourId));
     g.setFont(juce::FontOptions(10.0f, juce::Font::plain));
     g.drawFittedText(label.getText(), label.getLocalBounds(), label.getJustificationType(), 1);
+}
+
+void WavoriaLookAndFeel::drawButtonBackground(juce::Graphics& g, juce::Button& button,
+                                               const juce::Colour& background,
+                                               bool isMouseOverButton, bool isButtonDown)
+{
+    auto bounds = button.getLocalBounds().toFloat().reduced(0.5f);
+    auto colour = background;
+    if (isButtonDown)
+        colour = colour.brighter(0.18f);
+    else if (isMouseOverButton)
+        colour = colour.brighter(0.09f);
+    if (!button.isEnabled())
+        colour = colour.withAlpha(0.28f);
+    g.setColour(colour);
+    g.fillRoundedRectangle(bounds, 4.0f);
+    g.setColour((background == palette::coral ? palette::coral : palette::jade)
+                    .withAlpha(button.isEnabled() ? 0.52f : 0.16f));
+    g.drawRoundedRectangle(bounds, 4.0f, 1.0f);
+}
+
+void WavoriaLookAndFeel::drawButtonText(juce::Graphics& g, juce::TextButton& button,
+                                        bool, bool)
+{
+    g.setColour(palette::ivory.withAlpha(button.isEnabled() ? 0.92f : 0.28f));
+    g.setFont(juce::FontOptions(9.5f, juce::Font::bold));
+    g.drawFittedText(button.getButtonText(), button.getLocalBounds().reduced(5, 1),
+                     juce::Justification::centred, 1);
+}
+
+void WavoriaLookAndFeel::drawComboBox(juce::Graphics& g, int width, int height, bool,
+                                      int buttonX, int buttonY, int buttonWidth, int buttonHeight,
+                                      juce::ComboBox& box)
+{
+    auto bounds = juce::Rectangle<float>(0.5f, 0.5f,
+                                         static_cast<float>(width) - 1.0f,
+                                         static_cast<float>(height) - 1.0f);
+    g.setColour(box.findColour(juce::ComboBox::backgroundColourId));
+    g.fillRoundedRectangle(bounds, 4.0f);
+    g.setColour(box.findColour(juce::ComboBox::outlineColourId));
+    g.drawRoundedRectangle(bounds, 4.0f, 1.0f);
+
+    const auto arrowArea = juce::Rectangle<float>(static_cast<float>(buttonX),
+                                                   static_cast<float>(buttonY),
+                                                   static_cast<float>(buttonWidth),
+                                                   static_cast<float>(buttonHeight));
+    juce::Path arrow;
+    arrow.addTriangle(arrowArea.getCentreX() - 4.0f, arrowArea.getCentreY() - 2.0f,
+                      arrowArea.getCentreX() + 4.0f, arrowArea.getCentreY() - 2.0f,
+                      arrowArea.getCentreX(), arrowArea.getCentreY() + 3.0f);
+    g.setColour(box.findColour(juce::ComboBox::arrowColourId));
+    g.fillPath(arrow);
 }
 
 ParameterKnob::ParameterKnob(juce::AudioProcessorValueTreeState& state,
@@ -295,7 +355,7 @@ void TerrainGlobe::paint(juce::Graphics& g)
     g.drawFittedText(status, getLocalBounds().removeFromBottom(46), juce::Justification::centred, 1);
     g.setColour(palette::muted);
     g.setFont(juce::FontOptions(9.5f));
-    g.drawFittedText("SURFACE   •   FIELD   •   PATH   •   MEMORY",
+    g.drawFittedText("SURFACE   /   FIELD   /   PATH   /   MEMORY",
                      getLocalBounds().removeFromBottom(25), juce::Justification::centred, 1);
 }
 
@@ -320,7 +380,7 @@ void TerrainGlobe::timerCallback()
 }
 
 WavoriaAudioProcessorEditor::WavoriaAudioProcessorEditor(WavoriaAudioProcessor& p)
-    : AudioProcessorEditor(&p), processor(p), globe(p)
+    : AudioProcessorEditor(&p), processor(p), presetManager(p.parameters), globe(p)
 {
     setLookAndFeel(&lookAndFeel);
     setOpaque(true);
@@ -328,6 +388,65 @@ WavoriaAudioProcessorEditor::WavoriaAudioProcessorEditor(WavoriaAudioProcessor& 
     setResizeLimits(1080, 700, 1600, 1040);
     setSize(1280, 800);
     addAndMakeVisible(globe);
+
+    presetBox.setEditableText(true);
+    presetBox.setJustificationType(juce::Justification::centredLeft);
+    presetBox.setTextWhenNothingSelected("SELECT OR NAME A PRESET");
+    presetBox.onChange = [this] { loadSelectedPreset(); };
+
+    const std::array<juce::Component*, 9> presetComponents {
+        &presetBox, &previousPresetButton, &nextPresetButton, &discoverButton, &newFieldButton,
+        &savePresetButton, &saveAsPresetButton, &renamePresetButton, &deletePresetButton
+    };
+    for (auto* component : presetComponents)
+        addAndMakeVisible(*component);
+
+    previousPresetButton.onClick = [this] { stepPreset(-1); };
+    nextPresetButton.onClick = [this] { stepPreset(1); };
+    discoverButton.onClick = [this]
+    {
+        const auto name = presetManager.discover();
+        processor.requestNewField();
+        refreshPresetList(name);
+    };
+    newFieldButton.onClick = [this]
+    {
+        presetManager.createNewFieldSeed();
+        processor.requestNewField();
+    };
+    savePresetButton.onClick = [this]
+    {
+        if (presetManager.saveUserPreset(presetManager.getCurrentPresetName()))
+            refreshPresetList(presetManager.getCurrentPresetName());
+    };
+    saveAsPresetButton.onClick = [this]
+    {
+        auto name = presetBox.getText().trim();
+        if (name.isEmpty() || name.equalsIgnoreCase(presetManager.getCurrentPresetName()))
+            name = presetManager.getCurrentPresetName() + " COPY";
+        if (presetManager.saveUserPreset(name))
+            refreshPresetList(presetManager.getCurrentPresetName());
+    };
+    renamePresetButton.onClick = [this]
+    {
+        if (presetManager.renameUserPreset(presetBox.getText()))
+            refreshPresetList(presetManager.getCurrentPresetName());
+    };
+    deletePresetButton.onClick = [this]
+    {
+        if (presetManager.deleteUserPreset())
+        {
+            presetManager.loadPreset("INIT");
+            processor.requestNewField();
+            refreshPresetList("INIT");
+        }
+    };
+
+    discoverButton.setColour(juce::TextButton::buttonColourId, palette::lagoon.withAlpha(0.68f));
+    newFieldButton.setColour(juce::TextButton::buttonColourId, palette::coral.withAlpha(0.55f));
+    for (auto* button : { &previousPresetButton, &nextPresetButton, &savePresetButton,
+                          &saveAsPresetButton, &renamePresetButton, &deletePresetButton })
+        button->setColour(juce::TextButton::buttonColourId, palette::panel.brighter(0.10f));
 
     addKnob(surfaceKnobs, "topology", "Topology");
     addKnob(surfaceKnobs, "contour", "Contour");
@@ -363,6 +482,9 @@ WavoriaAudioProcessorEditor::WavoriaAudioProcessorEditor(WavoriaAudioProcessor& 
                                             : palette::jade;
         ownedKnobs[index]->setAccent(colour);
     }
+
+    refreshPresetList("INIT");
+    resized(); // setSize() ran before the dynamically-created controls existed.
 }
 
 WavoriaAudioProcessorEditor::~WavoriaAudioProcessorEditor()
@@ -391,9 +513,9 @@ void WavoriaAudioProcessorEditor::paint(juce::Graphics& g)
     g.fillRect(getLocalBounds());
 
     g.setColour(juce::Colours::black.withAlpha(0.4f));
-    g.fillRect(0, 0, getWidth(), 72);
+    g.fillRect(0, 0, getWidth(), 114);
     g.setColour(palette::panelEdge.withAlpha(0.7f));
-    g.drawHorizontalLine(71, 0.0f, static_cast<float>(getWidth()));
+    g.drawHorizontalLine(113, 0.0f, static_cast<float>(getWidth()));
 
     g.setColour(palette::jade);
     g.fillRoundedRectangle(22.0f, 18.0f, 34.0f, 34.0f, 4.0f);
@@ -419,7 +541,11 @@ void WavoriaAudioProcessorEditor::paint(juce::Graphics& g)
     g.drawText("12-VOICE SHARED FIELD", getWidth() - 260, 38, 235, 18,
                juce::Justification::centredRight);
 
-    auto content = getLocalBounds().withTrimmedTop(84).reduced(14, 10);
+    g.setColour(palette::muted);
+    g.setFont(juce::FontOptions(9.0f, juce::Font::bold));
+    g.drawText("PRESET", 22, 80, 44, 24, juce::Justification::centredLeft);
+
+    auto content = getLocalBounds().withTrimmedTop(124).reduced(14, 10);
     const auto sideWidth = juce::jlimit(230, 282, static_cast<int>(content.getWidth() * 0.225f));
     auto left = content.removeFromLeft(sideWidth);
     content.removeFromLeft(12);
@@ -462,7 +588,26 @@ void WavoriaAudioProcessorEditor::drawPanel(juce::Graphics& g, juce::Rectangle<i
 
 void WavoriaAudioProcessorEditor::resized()
 {
-    auto content = getLocalBounds().withTrimmedTop(84).reduced(14, 10);
+    auto presetBar = getLocalBounds().withTrimmedTop(75).removeFromTop(31).reduced(72, 1);
+    previousPresetButton.setBounds(presetBar.removeFromLeft(27));
+    presetBar.removeFromLeft(4);
+    nextPresetButton.setBounds(presetBar.removeFromLeft(27));
+    presetBar.removeFromLeft(8);
+    presetBox.setBounds(presetBar.removeFromLeft(juce::jlimit(220, 300, getWidth() / 5)));
+    presetBar.removeFromLeft(8);
+    discoverButton.setBounds(presetBar.removeFromLeft(98));
+    presetBar.removeFromLeft(6);
+    newFieldButton.setBounds(presetBar.removeFromLeft(88));
+    presetBar.removeFromLeft(16);
+    savePresetButton.setBounds(presetBar.removeFromLeft(56));
+    presetBar.removeFromLeft(6);
+    saveAsPresetButton.setBounds(presetBar.removeFromLeft(70));
+    presetBar.removeFromLeft(6);
+    renamePresetButton.setBounds(presetBar.removeFromLeft(70));
+    presetBar.removeFromLeft(6);
+    deletePresetButton.setBounds(presetBar.removeFromLeft(62));
+
+    auto content = getLocalBounds().withTrimmedTop(124).reduced(14, 10);
     const auto sideWidth = juce::jlimit(230, 282, static_cast<int>(content.getWidth() * 0.225f));
     auto left = content.removeFromLeft(sideWidth);
     content.removeFromLeft(12);
@@ -475,13 +620,76 @@ void WavoriaAudioProcessorEditor::resized()
     layoutGrid(surface.withTrimmedTop(30).reduced(5), surfaceKnobs, 2);
     layoutGrid(left.withTrimmedTop(30).reduced(5), fieldKnobs, 2);
 
-    auto orbit = right.removeFromTop(static_cast<int>(right.getHeight() * 0.37f));
+    const auto orbitHeight = static_cast<int>(right.getHeight() * 0.37f);
+    const auto voiceHeight = static_cast<int>(right.getHeight() * 0.30f);
+    auto orbit = right.removeFromTop(orbitHeight);
     right.removeFromTop(10);
-    auto voice = right.removeFromTop(static_cast<int>(right.getHeight() * 0.48f));
+    auto voice = right.removeFromTop(voiceHeight);
     right.removeFromTop(10);
     layoutGrid(orbit.withTrimmedTop(30).reduced(4), orbitKnobs, 3);
     layoutGrid(voice.withTrimmedTop(30).reduced(4), voiceKnobs, 2);
     layoutGrid(right.withTrimmedTop(30).reduced(4), outputKnobs, 2);
+}
+
+void WavoriaAudioProcessorEditor::refreshPresetList(const juce::String& selection)
+{
+    const juce::ScopedValueSetter<bool> guard(refreshingPresetList, true);
+    presetBox.clear(juce::dontSendNotification);
+    const auto names = presetManager.getPresetNames();
+    int itemId = 1;
+    bool addedUserHeading = false;
+    for (const auto& name : names)
+    {
+        if (!presetManager.isFactoryPreset(name) && !addedUserHeading)
+        {
+            presetBox.addSeparator();
+            presetBox.addSectionHeading("USER PRESETS");
+            addedUserHeading = true;
+        }
+        presetBox.addItem(name, itemId++);
+    }
+
+    const auto selectedName = selection.isNotEmpty() ? selection : presetManager.getCurrentPresetName();
+    const auto index = names.indexOf(selectedName);
+    if (index >= 0)
+        presetBox.setSelectedId(index + 1, juce::dontSendNotification);
+    else
+        presetBox.setText(selectedName, juce::dontSendNotification);
+    updatePresetButtons();
+}
+
+void WavoriaAudioProcessorEditor::updatePresetButtons()
+{
+    const auto isUser = presetManager.isUserPreset(presetManager.getCurrentPresetName());
+    renamePresetButton.setEnabled(isUser);
+    deletePresetButton.setEnabled(isUser);
+}
+
+void WavoriaAudioProcessorEditor::stepPreset(int delta)
+{
+    const auto names = presetManager.getPresetNames();
+    if (names.isEmpty())
+        return;
+    auto index = names.indexOf(presetManager.getCurrentPresetName());
+    if (index < 0)
+        index = 0;
+    index = (index + delta + names.size()) % names.size();
+    if (presetManager.loadPreset(names[index]))
+    {
+        processor.requestNewField();
+        refreshPresetList(presetManager.getCurrentPresetName());
+    }
+}
+
+void WavoriaAudioProcessorEditor::loadSelectedPreset()
+{
+    if (refreshingPresetList || presetBox.getSelectedId() <= 0)
+        return;
+    if (presetManager.loadPreset(presetBox.getText()))
+    {
+        processor.requestNewField();
+        updatePresetButtons();
+    }
 }
 
 void WavoriaAudioProcessorEditor::layoutGrid(juce::Rectangle<int> bounds,

@@ -4,6 +4,8 @@
 
 Wavoria is Veloria’s sister instrument. Both use Latham Audio’s dark glass and machined-metal construction, dense central engine visualization, compact uppercase technical labels, neutral ivory type, and restrained luminous energy. Layout and material establish the family; color and engine behavior establish the individual instrument.
 
+The preset strip follows the established family workflow: previous/next selection, an editable preset name, Discover, New Field, Save, Save As, Rename, and Delete. Discover generates a constrained playable state across terrain, trajectory, memory, voice, and output parameters. New Field changes the deterministic seed and clears accumulated terrain memory without otherwise redesigning the sound.
+
 ## Wavoria color
 
 | Role | Name | RGB | Use |
@@ -28,4 +30,3 @@ The central globe is a direct instrument view:
 - the idle state remains dimensional and legible, never a blank analyzer
 
 Avoid concentric radar circles, generic spectrum bars, decorative waveforms, and unrelated space imagery. The object is a navigable mathematical world, not a sci-fi screen treatment.
-

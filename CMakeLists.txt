@@ -20,7 +20,7 @@ if(WAVORIA_BUILD_PLUGIN)
     FetchContent_MakeAvailable(JUCE)
 
     juce_add_plugin(Wavoria
-        COMPANY_NAME "Latham Audio"
+        COMPANY_NAME "LATHAMAUDIO"
         BUNDLE_ID com.lathamaudio.wavoria
         PLUGIN_MANUFACTURER_CODE Latm
         PLUGIN_CODE Wvra
@@ -41,6 +41,8 @@ if(WAVORIA_BUILD_PLUGIN)
             Source/PluginProcessor.h
             Source/PluginEditor.cpp
             Source/PluginEditor.h
+            Source/PresetManager.cpp
+            Source/PresetManager.h
             Source/dsp/WaveTerrainEngine.h
     )
 

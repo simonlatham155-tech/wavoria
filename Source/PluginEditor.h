@@ -3,6 +3,7 @@
 #include <JuceHeader.h>
 
 #include "PluginProcessor.h"
+#include "PresetManager.h"
 
 #include <array>
 #include <deque>
@@ -17,6 +18,13 @@ public:
                           float sliderPosition, float rotaryStartAngle, float rotaryEndAngle,
                           juce::Slider&) override;
     void drawLabel(juce::Graphics&, juce::Label&) override;
+    void drawButtonBackground(juce::Graphics&, juce::Button&, const juce::Colour&,
+                              bool isMouseOverButton, bool isButtonDown) override;
+    void drawButtonText(juce::Graphics&, juce::TextButton&,
+                        bool isMouseOverButton, bool isButtonDown) override;
+    void drawComboBox(juce::Graphics&, int width, int height, bool isButtonDown,
+                      int buttonX, int buttonY, int buttonWidth, int buttonHeight,
+                      juce::ComboBox&) override;
 };
 
 class ParameterKnob final : public juce::Component
@@ -68,10 +76,25 @@ private:
                            const char* name, const char* suffix = "");
     static void layoutGrid(juce::Rectangle<int>, const std::vector<ParameterKnob*>&, int columns);
     void drawPanel(juce::Graphics&, juce::Rectangle<int>, const juce::String& title) const;
+    void refreshPresetList(const juce::String& selection = {});
+    void updatePresetButtons();
+    void stepPreset(int delta);
+    void loadSelectedPreset();
 
     WavoriaAudioProcessor& processor;
     WavoriaLookAndFeel lookAndFeel;
+    PresetManager presetManager;
     TerrainGlobe globe;
+    juce::ComboBox presetBox;
+    juce::TextButton previousPresetButton { "<" };
+    juce::TextButton nextPresetButton { ">" };
+    juce::TextButton discoverButton { "DISCOVER" };
+    juce::TextButton newFieldButton { "NEW FIELD" };
+    juce::TextButton savePresetButton { "SAVE" };
+    juce::TextButton saveAsPresetButton { "SAVE AS" };
+    juce::TextButton renamePresetButton { "RENAME" };
+    juce::TextButton deletePresetButton { "DELETE" };
+    bool refreshingPresetList { false };
     std::vector<std::unique_ptr<ParameterKnob>> ownedKnobs;
     std::vector<ParameterKnob*> surfaceKnobs;
     std::vector<ParameterKnob*> fieldKnobs;
