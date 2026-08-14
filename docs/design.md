@@ -4,6 +4,8 @@
 
 Wavoria is Veloria’s sister instrument. Both use Latham Audio’s dark glass and machined-metal construction, dense central engine visualization, compact uppercase technical labels, neutral ivory type, and restrained luminous energy. Layout and material establish the family; color and engine behavior establish the individual instrument.
 
+The master wordmark is always `LATHAMAUDIO` without a space. `LATHAM` uses the light/regular face and `AUDIO` uses the bold face. This typography is fixed across every Latham Audio instrument; product identity comes from the instrument name, engine view, and signature colour.
+
 The preset strip follows the established family workflow: previous/next selection, an editable preset name, Discover, New Field, Save, Save As, Rename, and Delete. Discover generates a constrained playable state across terrain, trajectory, memory, voice, and output parameters. New Field changes the deterministic seed and clears accumulated terrain memory without otherwise redesigning the sound.
 
 ## Wavoria color

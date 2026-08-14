@@ -523,9 +523,13 @@ void WavoriaAudioProcessorEditor::paint(juce::Graphics& g)
     g.setFont(juce::FontOptions(14.0f, juce::Font::bold));
     g.drawFittedText("LA", 22, 18, 34, 34, juce::Justification::centred, 1);
 
+    juce::AttributedString brand;
+    brand.setJustification(juce::Justification::centredLeft);
+    brand.append("LATHAM", juce::Font(juce::FontOptions(12.0f, juce::Font::plain)), palette::ivory);
+    brand.append("AUDIO", juce::Font(juce::FontOptions(12.0f, juce::Font::bold)), palette::ivory);
+    brand.draw(g, juce::Rectangle<float>(68.0f, 13.0f, 180.0f, 18.0f));
+
     g.setColour(palette::ivory);
-    g.setFont(juce::FontOptions(12.0f, juce::Font::bold));
-    g.drawText("LATHAM AUDIO", 68, 13, 180, 18, juce::Justification::centredLeft);
     g.setFont(juce::FontOptions(28.0f, juce::Font::bold));
     g.drawText("WAVORIA", 67, 29, 220, 32, juce::Justification::centredLeft);
     g.setColour(palette::jade);
