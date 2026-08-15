@@ -64,6 +64,7 @@ The fundamental path phase remains locked to note frequency. Slow drift and fiel
 - Pitch bend is ±2 semitones.
 - Sustain retains readers while released keys continue to write the shared field.
 - Stereo width distributes the reader ensemble around an anchored constant-power field; a single reader always remains audible in both channels.
+- Any front-panel parameter can learn one MIDI CC from its knob context menu. Learned mappings are atomic, allocation-free in the audio path, and stored with the host project rather than with sound presets.
 
 ## Real-time constraints
 

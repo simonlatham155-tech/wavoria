@@ -30,6 +30,7 @@ The first playable architecture includes:
 - ADSR, tone control, nonlinear drive, stereo voice field, and output level
 - eight factory sounds plus editable user presets stored in Wavoria's own preset format
 - Veloria-family Discover, New Field, Save, Save As, Rename, Delete, and previous/next workflow
+- per-knob MIDI CC learn with right-click assignment, visible CC badges, and project recall
 - VST3, Audio Unit, and standalone targets through JUCE
 - dependency-free DSP tests for bounds, determinism, field memory, chord deformation, and release behavior
 

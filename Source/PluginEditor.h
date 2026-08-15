@@ -27,18 +27,27 @@ public:
                       juce::ComboBox&) override;
 };
 
-class ParameterKnob final : public juce::Component
+class ParameterKnob final : public juce::Component,
+                            private juce::Timer
 {
 public:
-    ParameterKnob(juce::AudioProcessorValueTreeState&, const juce::String& parameterId,
+    ParameterKnob(WavoriaAudioProcessor&, const juce::String& parameterId,
                   const juce::String& displayName, const juce::String& suffix = {});
     void setAccent(juce::Colour colour) { slider.setColour(juce::Slider::rotarySliderFillColourId, colour); }
     void paint(juce::Graphics&) override;
     void resized() override;
+    void mouseDown(const juce::MouseEvent&) override;
 
 private:
+    void timerCallback() override;
+    void refreshMidiLearnDisplay();
+
+    WavoriaAudioProcessor& processor;
     juce::Slider slider;
+    juce::String parameterId;
     juce::String name;
+    int displayedController { -2 };
+    bool displayedLearning { false };
     using Attachment = juce::AudioProcessorValueTreeState::SliderAttachment;
     std::unique_ptr<Attachment> attachment;
 };

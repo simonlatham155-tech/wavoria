@@ -134,32 +134,101 @@ void WavoriaLookAndFeel::drawComboBox(juce::Graphics& g, int width, int height, 
     g.fillPath(arrow);
 }
 
-ParameterKnob::ParameterKnob(juce::AudioProcessorValueTreeState& state,
+ParameterKnob::ParameterKnob(WavoriaAudioProcessor& p,
                              const juce::String& parameterId,
                              const juce::String& displayName,
                              const juce::String& suffix)
-    : name(displayName)
+    : processor(p), parameterId(parameterId), name(displayName)
 {
     slider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
     slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 76, 17);
     slider.setTextValueSuffix(suffix);
-    if (auto* parameter = state.getParameter(parameterId))
+    if (auto* parameter = processor.parameters.getParameter(parameterId))
         slider.setDoubleClickReturnValue(true, parameter->convertFrom0to1(parameter->getDefaultValue()));
     slider.setColour(juce::Slider::rotarySliderFillColourId, palette::jade);
+    slider.addMouseListener(this, true);
     addAndMakeVisible(slider);
-    attachment = std::make_unique<Attachment>(state, parameterId, slider);
+    attachment = std::make_unique<Attachment>(processor.parameters, parameterId, slider);
+    startTimerHz(8);
+    refreshMidiLearnDisplay();
 }
 
 void ParameterKnob::paint(juce::Graphics& g)
 {
+    auto header = getLocalBounds().removeFromTop(17);
+    const auto badgeWidth = displayedLearning ? 42 : (displayedController >= 0 ? 34 : 0);
+    auto badge = badgeWidth > 0 ? header.removeFromRight(badgeWidth) : juce::Rectangle<int>();
     g.setColour(palette::muted);
     g.setFont(juce::FontOptions(10.5f, juce::Font::bold));
-    g.drawFittedText(name.toUpperCase(), getLocalBounds().removeFromTop(17), juce::Justification::centred, 1);
+    g.drawFittedText(name.toUpperCase(), header, juce::Justification::centred, 1);
+
+    if (!badge.isEmpty())
+    {
+        g.setColour(displayedLearning ? palette::coral : palette::jade.withAlpha(0.82f));
+        g.setFont(juce::FontOptions(8.0f, juce::Font::bold));
+        g.drawFittedText(displayedLearning ? "LEARN" : "CC" + juce::String(displayedController),
+                         badge.reduced(1, 2), juce::Justification::centred, 1);
+    }
 }
 
 void ParameterKnob::resized()
 {
     slider.setBounds(getLocalBounds().withTrimmedTop(14));
+}
+
+void ParameterKnob::mouseDown(const juce::MouseEvent& event)
+{
+    if (!event.mods.isPopupMenu())
+        return;
+
+    const auto controller = processor.getMidiControllerForParameter(parameterId);
+    const auto learning = processor.isMidiLearning(parameterId);
+    juce::PopupMenu menu;
+    menu.addItem(1, learning ? "Cancel MIDI Learn" : "MIDI Learn");
+    menu.addItem(2, controller >= 0 ? "Clear MIDI Learn (CC " + juce::String(controller) + ")"
+                                    : "Clear MIDI Learn", controller >= 0);
+
+    juce::Component::SafePointer<ParameterKnob> safeThis(this);
+    menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(&slider),
+                       [safeThis, learning](int result)
+    {
+        if (safeThis == nullptr)
+            return;
+        if (result == 1)
+        {
+            if (learning)
+                safeThis->processor.cancelMidiLearn(safeThis->parameterId);
+            else
+                safeThis->processor.beginMidiLearn(safeThis->parameterId);
+        }
+        else if (result == 2)
+            safeThis->processor.clearMidiLearn(safeThis->parameterId);
+        safeThis->refreshMidiLearnDisplay();
+    });
+}
+
+void ParameterKnob::timerCallback()
+{
+    refreshMidiLearnDisplay();
+}
+
+void ParameterKnob::refreshMidiLearnDisplay()
+{
+    const auto controller = processor.getMidiControllerForParameter(parameterId);
+    const auto learning = processor.isMidiLearning(parameterId);
+    if (controller == displayedController && learning == displayedLearning)
+        return;
+
+    displayedController = controller;
+    displayedLearning = learning;
+    if (learning)
+        slider.setTooltip("Move a MIDI controller to assign it to " + name);
+    else if (controller >= 0)
+        slider.setTooltip(name + " is assigned to MIDI CC " + juce::String(controller)
+                          + ". Right-click to change or clear it.");
+    else
+        slider.setTooltip("Right-click for MIDI Learn");
+    repaint();
 }
 
 TerrainGlobe::TerrainGlobe(WavoriaAudioProcessor& p)
@@ -496,7 +565,7 @@ ParameterKnob* WavoriaAudioProcessorEditor::addKnob(std::vector<ParameterKnob*>&
                                                      const char* id, const char* name,
                                                      const char* suffix)
 {
-    auto control = std::make_unique<ParameterKnob>(processor.parameters, id, name, suffix);
+    auto control = std::make_unique<ParameterKnob>(processor, id, name, suffix);
     auto* pointer = control.get();
     addAndMakeVisible(*pointer);
     ownedKnobs.push_back(std::move(control));
@@ -548,6 +617,11 @@ void WavoriaAudioProcessorEditor::paint(juce::Graphics& g)
     g.setColour(palette::muted);
     g.setFont(juce::FontOptions(9.0f, juce::Font::bold));
     g.drawText("PRESET", 22, 80, 44, 24, juce::Justification::centredLeft);
+    const auto midiHintX = deletePresetButton.getRight() + 10;
+    g.setColour(palette::jade.withAlpha(0.62f));
+    g.drawFittedText("MIDI: RIGHT-CLICK KNOB", midiHintX, 80,
+                     juce::jmax(0, getWidth() - midiHintX - 22), 24,
+                     juce::Justification::centredRight, 1);
 
     auto content = getLocalBounds().withTrimmedTop(124).reduced(14, 10);
     const auto sideWidth = juce::jlimit(230, 282, static_cast<int>(content.getWidth() * 0.225f));

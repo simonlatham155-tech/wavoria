@@ -8,6 +8,8 @@
 
 namespace
 {
+constexpr auto midiMappingPrefix = "midi_cc_";
+
 juce::NormalisableRange<float> skewedRange(float minimum, float maximum, float centre)
 {
     juce::NormalisableRange<float> range(minimum, maximum);
@@ -24,6 +26,51 @@ WavoriaAudioProcessor::WavoriaAudioProcessor()
     channelPressure.fill(0.0f);
     channelModWheel.fill(0.0f);
     sustainPedal.fill(false);
+    for (std::size_t index = 0; index < midiLearnParameterIds.size(); ++index)
+    {
+        midiLearnParameters[index] = parameters.getParameter(midiLearnParameterIds[index]);
+        midiCcAssignments[index].store(-1, std::memory_order_relaxed);
+    }
+}
+
+int WavoriaAudioProcessor::midiLearnIndexFor(const juce::String& parameterId) noexcept
+{
+    for (std::size_t index = 0; index < midiLearnParameterIds.size(); ++index)
+        if (parameterId == midiLearnParameterIds[index])
+            return static_cast<int>(index);
+    return -1;
+}
+
+void WavoriaAudioProcessor::beginMidiLearn(const juce::String& parameterId) noexcept
+{
+    midiLearnTarget.store(midiLearnIndexFor(parameterId), std::memory_order_release);
+}
+
+void WavoriaAudioProcessor::cancelMidiLearn(const juce::String& parameterId) noexcept
+{
+    const auto index = midiLearnIndexFor(parameterId);
+    auto expected = index;
+    midiLearnTarget.compare_exchange_strong(expected, -1, std::memory_order_acq_rel);
+}
+
+void WavoriaAudioProcessor::clearMidiLearn(const juce::String& parameterId) noexcept
+{
+    const auto index = midiLearnIndexFor(parameterId);
+    if (index < 0)
+        return;
+    cancelMidiLearn(parameterId);
+    midiCcAssignments[static_cast<std::size_t>(index)].store(-1, std::memory_order_release);
+}
+
+int WavoriaAudioProcessor::getMidiControllerForParameter(const juce::String& parameterId) const noexcept
+{
+    const auto index = midiLearnIndexFor(parameterId);
+    return index >= 0 ? midiCcAssignments[static_cast<std::size_t>(index)].load(std::memory_order_acquire) : -1;
+}
+
+bool WavoriaAudioProcessor::isMidiLearning(const juce::String& parameterId) const noexcept
+{
+    return midiLearnTarget.load(std::memory_order_acquire) == midiLearnIndexFor(parameterId);
 }
 
 juce::AudioProcessorValueTreeState::ParameterLayout WavoriaAudioProcessor::createParameterLayout()
@@ -245,6 +292,7 @@ void WavoriaAudioProcessor::handleMidiMessage(const juce::MidiMessage& message,
     {
         const auto controller = message.getControllerNumber();
         const auto value = message.getControllerValue();
+        handleMidiControllerLearn(controller, value);
         if (controller == 1)
             channelModWheel[channelIndex] = static_cast<float>(value) / 127.0f;
         else if (controller == 64)
@@ -266,6 +314,30 @@ void WavoriaAudioProcessor::handleMidiMessage(const juce::MidiMessage& message,
                 }
             }
         }
+    }
+}
+
+void WavoriaAudioProcessor::handleMidiControllerLearn(int controller, int value) noexcept
+{
+    if (controller < 0 || controller >= 120)
+        return;
+
+    const auto target = midiLearnTarget.exchange(-1, std::memory_order_acq_rel);
+    if (target >= 0 && target < static_cast<int>(midiCcAssignments.size()))
+    {
+        // One CC controls one Wavoria parameter. Re-learning transfers ownership.
+        for (auto& assignment : midiCcAssignments)
+            if (assignment.load(std::memory_order_relaxed) == controller)
+                assignment.store(-1, std::memory_order_relaxed);
+        midiCcAssignments[static_cast<std::size_t>(target)].store(controller, std::memory_order_release);
+    }
+
+    const auto normalised = static_cast<float>(juce::jlimit(0, 127, value)) / 127.0f;
+    for (std::size_t index = 0; index < midiCcAssignments.size(); ++index)
+    {
+        if (midiCcAssignments[index].load(std::memory_order_acquire) == controller)
+            if (auto* parameter = midiLearnParameters[index])
+                parameter->setValueNotifyingHost(normalised);
     }
 }
 
@@ -389,7 +461,11 @@ juce::AudioProcessorEditor* WavoriaAudioProcessor::createEditor()
 
 void WavoriaAudioProcessor::getStateInformation(juce::MemoryBlock& destination)
 {
-    if (auto xml = parameters.copyState().createXml())
+    auto state = parameters.copyState();
+    for (std::size_t index = 0; index < midiLearnParameterIds.size(); ++index)
+        state.setProperty(juce::String(midiMappingPrefix) + midiLearnParameterIds[index],
+                          midiCcAssignments[index].load(std::memory_order_acquire), nullptr);
+    if (auto xml = state.createXml())
         copyXmlToBinary(*xml, destination);
 }
 
@@ -397,7 +473,20 @@ void WavoriaAudioProcessor::setStateInformation(const void* data, int size)
 {
     if (auto xml = getXmlFromBinary(data, size))
     {
-        parameters.replaceState(juce::ValueTree::fromXml(*xml));
+        auto restoredState = juce::ValueTree::fromXml(*xml);
+        if (!restoredState.isValid())
+            return;
+        for (std::size_t index = 0; index < midiLearnParameterIds.size(); ++index)
+        {
+            const auto property = juce::Identifier(juce::String(midiMappingPrefix)
+                                                    + midiLearnParameterIds[index]);
+            const auto controller = juce::jlimit(-1, 119,
+                                                  static_cast<int>(restoredState.getProperty(property, -1)));
+            midiCcAssignments[index].store(controller, std::memory_order_release);
+            restoredState.removeProperty(property, nullptr);
+        }
+        midiLearnTarget.store(-1, std::memory_order_release);
+        parameters.replaceState(restoredState);
         requestNewField();
     }
 }

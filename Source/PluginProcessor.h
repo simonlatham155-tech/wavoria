@@ -52,6 +52,11 @@ public:
     [[nodiscard]] float getFieldEnergy() const noexcept { return fieldEnergy.load(std::memory_order_relaxed); }
     [[nodiscard]] int getActiveVoiceCount() const noexcept { return activeVoiceCount.load(std::memory_order_relaxed); }
     void requestNewField() noexcept { clearFieldRequested.store(true, std::memory_order_release); }
+    void beginMidiLearn(const juce::String& parameterId) noexcept;
+    void cancelMidiLearn(const juce::String& parameterId) noexcept;
+    void clearMidiLearn(const juce::String& parameterId) noexcept;
+    [[nodiscard]] int getMidiControllerForParameter(const juce::String& parameterId) const noexcept;
+    [[nodiscard]] bool isMidiLearning(const juce::String& parameterId) const noexcept;
 
     juce::AudioProcessorValueTreeState parameters;
 
@@ -85,6 +90,7 @@ private:
     };
 
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
+    [[nodiscard]] static int midiLearnIndexFor(const juce::String& parameterId) noexcept;
     [[nodiscard]] ParameterSnapshot readParameters() const noexcept;
     void renderRange(juce::AudioBuffer<float>& buffer, int startSample, int numSamples,
                      const ParameterSnapshot& snapshot) noexcept;
@@ -93,6 +99,7 @@ private:
     void stopNote(int note, int channel, bool allowTail) noexcept;
     void updateChannelPitch(int channel) noexcept;
     void releaseSustainedVoices(int channel) noexcept;
+    void handleMidiControllerLearn(int controller, int value) noexcept;
     [[nodiscard]] VoiceSlot& findVoiceToUse() noexcept;
     [[nodiscard]] float frequencyFor(const VoiceSlot&) const noexcept;
 
@@ -109,6 +116,16 @@ private:
     std::atomic<float> fieldEnergy { 0.0f };
     std::atomic<int> activeVoiceCount { 0 };
     std::atomic<bool> clearFieldRequested { false };
+    static constexpr std::array<const char*, 21> midiLearnParameterIds {
+        "topology", "contour", "fold", "symmetry",
+        "orbit", "radius", "rotation", "drift", "interaction",
+        "deform", "memory", "gravity",
+        "attack", "decay", "sustain", "release",
+        "tone", "drive", "width", "level", "seed"
+    };
+    std::array<juce::RangedAudioParameter*, midiLearnParameterIds.size()> midiLearnParameters {};
+    std::array<std::atomic<int>, midiLearnParameterIds.size()> midiCcAssignments {};
+    std::atomic<int> midiLearnTarget { -1 };
     std::uint64_t voiceAge { 0 };
     int visualUpdateCountdown { 0 };
 

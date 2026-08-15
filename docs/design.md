@@ -8,6 +8,8 @@ The master wordmark is always `LATHAMAUDIO` without a space. `LATHAM` uses the l
 
 The preset strip follows the established family workflow: previous/next selection, an editable preset name, Discover, New Field, Save, Save As, Rename, and Delete. Discover generates a constrained playable state across terrain, trajectory, memory, voice, and output parameters. New Field changes the deterministic seed and clears accumulated terrain memory without otherwise redesigning the sound.
 
+Every editing knob exposes MIDI Learn from its context menu. While waiting, the knob shows `LEARN`; after capture it shows its `CC` number. Assignments are instance/project state rather than preset content, so changing a sound does not rewrite the performer’s controller layout.
+
 ## Wavoria color
 
 | Role | Name | RGB | Use |
