@@ -1,0 +1,51 @@
+name: macOS Universal-2 VST3
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - fix/macos-universal2-vst3
+
+jobs:
+  macos-vst3:
+    runs-on: macos-15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure Universal-2 release
+        run: |
+          cmake -S . -B build-macos \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 \
+            -DWAVORIA_BUILD_PLUGIN=ON \
+            -DWAVORIA_BUILD_TESTS=ON
+
+      - name: Compile VST3 and DSP tests
+        run: cmake --build build-macos --config Release --target Wavoria_VST3 WavoriaDSPTests --parallel 3
+
+      - name: Run DSP tests
+        run: ctest --test-dir build-macos --build-config Release --output-on-failure
+
+      - name: Verify architectures, then sign completed bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          PLUGIN="build-macos/Wavoria_artefacts/Release/VST3/Wavoria.vst3"
+          EXECUTABLE="$PLUGIN/Contents/MacOS/Wavoria"
+          test -f "$EXECUTABLE"
+          file "$EXECUTABLE"
+          lipo -verify_arch arm64 x86_64 "$EXECUTABLE"
+          # Sign after JUCE has generated all VST3 resources, including moduleinfo.json.
+          codesign --force --deep --sign - "$PLUGIN"
+          codesign --verify --deep --strict --verbose=2 "$PLUGIN"
+          ditto -c -k --keepParent "$PLUGIN" Wavoria-macOS-Universal2-VST3.zip
+
+      - name: Upload installable VST3
+        uses: actions/upload-artifact@v4
+        with:
+          name: Wavoria-macOS-Universal2-VST3
+          path: Wavoria-macOS-Universal2-VST3.zip
+          if-no-files-found: error
