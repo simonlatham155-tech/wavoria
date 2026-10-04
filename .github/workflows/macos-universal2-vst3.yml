@@ -37,7 +37,7 @@ jobs:
           EXECUTABLE="$PLUGIN/Contents/MacOS/Wavoria"
           test -f "$EXECUTABLE"
           file "$EXECUTABLE"
-          lipo -verify_arch arm64 x86_64 "$EXECUTABLE"
+          lipo "$EXECUTABLE" -verify_arch arm64 x86_64
           # Sign after JUCE has generated all VST3 resources, including moduleinfo.json.
           codesign --force --deep --sign - "$PLUGIN"
           codesign --verify --deep --strict --verbose=2 "$PLUGIN"
